@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+from sys import argv as args
+from datetime import datetime
+
+import boto3
+
+
+FILTERS={}
+
+for a in args:
+    if '--' in a:
+        key, value = a.split('=')
+        key = key.split('--')[1]
+        FILTERS[key] = value
+
+
+def eval_res(r: map):
+    current_group = str()
+
+    reservations = r.get('Reservations', {})
+    for reservation in reservations:
+        for instance in reservation.get('Instances', []):
+            skip = False
+            values = {}
+
+            values['launched'] = instance.get('LaunchTime', datetime(1970, 1, 1)).strftime("%m-%d-%Y;%H:%M:%S")
+            values['state'] = instance.get('State').get('Name', 'NoState')
+            values['id'] = instance.get('InstanceId', 'NoID')
+            values['type'] = instance.get('InstanceType', 'NoType')
+            values['key'] = instance.get('KeyName', 'NoKey')
+            values['az'] = instance.get('Placement').get('AvailabilityZone', 'NoAZ')
+            values['pip'] = instance.get('PrivateIpAddress', 'NoIP')
+            values['name'] = 'NoName'
+
+            tags = instance.get('Tags', [])
+
+            for t in tags:
+                if t['Key'] == 'Name':
+                    values['name'] = t['Value']
+
+            # this isn't terribly efficient
+            # TODO: filter in the describe_instances call instead
+            for f, v in FILTERS.items():
+                if v not in values[f]:
+                    skip = True
+
+            if not skip:
+                print(f"{values['name']} => {values['id']} : {values['type']} ; {values['az']} @ {values['pip']} & {values['key']} # {values['state']} % {values['launched']}")
+
+
+client = boto3.client('ec2')
+
+res = client.describe_instances()
+next_token = res.get('NextToken', None)
+
+eval_res(res)
+
+while next_token:
+    res = client.describe_instances(NextToken=next_token)
+    next_token = res.get('NextToken', None)
+    eval_res(res)
