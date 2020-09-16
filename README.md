@@ -2,7 +2,7 @@
 A friendlier alternative to awscli ec2 module.
 
 ## What's it for?
-It makes looking up simple EC2 instance details quick and easy, versus digging through AWS' console or structuing kludgey command strings in awscli.
+It makes looking up simple EC2 instance details quick and easy, versus digging through AWS' console or structuring kludgey command strings in awscli.
 
 ## Requirements
 * python3.7+
